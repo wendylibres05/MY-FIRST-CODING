@@ -1,78 +1,30 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
-import { RowDataPacket, OkPacket } from 'mysql2';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
-export class ProgramsService {
-    constructor(private db: DatabaseService) { }
-    private pool = () => this.db.getPool();
+export class ProgramService {
+    private items: any[] = [];
 
-    async createProgram(program_name: string, degree_type: string, total_units?: number | null) {
-        const units = total_units ?? null;
-        const [result] = await this.pool().execute<OkPacket>(
-            'INSERT INTO program (program_name, degree_type, total_units) VALUES (?, ?, ?)',
-            [program_name, degree_type, units]
-        );
-        return { program_id: result.insertId, program_name, degree_type, total_units: units };
+    create(data: any) {
+        const newItem = { id: this.items.length + 1, ...data };
+        this.items.push(newItem);
+        return newItem;
     }
 
-    async getAll() {
-        const [rows] = await this.pool().execute<RowDataPacket[]>(
-            'SELECT program_id, program_name, degree_type, total_units FROM program'
-        );
-        return rows;
+    findAll() {
+        return this.items;
     }
 
-    async findById(id: number) {
-        const [rows] = await this.pool().execute<RowDataPacket[]>(
-            'SELECT program_id, program_name, degree_type, total_units FROM program WHERE program_id = ?',
-            [id]
-        );
-        const program = rows[0];
-        if (!program) throw new NotFoundException(`Program ${id} not found`);
-        return program;
+    findOne(id: number) {
+        return this.items.find(i => i.id === id);
     }
 
-    async updateProgram(id: number, data: {
-        program_name?: string;
-        degree_type?: string;
-        total_units?: number
-    } = {}) {
-        const fields: string[] = [];
-        const values: any[] = [];
-
-
-        if (data?.program_name) {
-            fields.push('program_name = ?');
-            values.push(data.program_name);
-        }
-        if (data?.degree_type) {
-            fields.push('degree_type = ?');
-            values.push(data.degree_type);
-        }
-        if (data?.total_units !== undefined) {
-            fields.push('total_units = ?');
-            values.push(data.total_units);
-        }
-
-        if (fields.length === 0) {
-            return this.findById(id);
-        }
-
-        values.push(id);
-        await this.pool().execute(
-            `UPDATE program SET ${fields.join(', ')} WHERE program_id = ?`,
-            values
-        );
-        return this.findById(id);
+    update(id: number, data: any) {
+        const index = this.items.findIndex(i => i.id === id);
+        this.items[index] = { ...this.items[index], ...data };
+        return this.items[index];
     }
 
-    async deleteProgram(id: number) {
-        const [res] = await this.pool().execute<OkPacket>(
-            'DELETE FROM program WHERE program_id = ?',
-            [id]
-        );
-        if (res.affectedRows === 0) throw new NotFoundException(`Program ${id} not found`);
-        return { deleted: true };
+    remove(id: number) {
+        this.items = this.items.filter(i => i.id !== id);
     }
 }

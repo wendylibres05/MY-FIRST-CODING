@@ -1,16 +1,9 @@
 import { Module } from '@nestjs/common';
-import { PassportModule } from '@nestjs/passport';
-import { DatabaseModule } from '../database/database.module'; // ✅ Add
-import { ProgramsController } from './program.controller';
-import { ProgramsService } from './program.service';
+import { ProgramController } from './program.controller';
+import { ProgramService } from './program.service';
 
 @Module({
-    imports: [
-        PassportModule.register({ defaultStrategy: 'jwt' }),
-        DatabaseModule
-    ],
-    controllers: [ProgramsController],
-    providers: [ProgramsService],
-    exports: [ProgramsService]
+    controllers: [ProgramController],
+    providers: [ProgramService],
 })
 export class ProgramModule { }

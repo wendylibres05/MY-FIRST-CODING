@@ -1,19 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
-import { ProgramModule } from './program/program.module';
-import { InstructorModule } from './instructor/instructor.module';
-import { CourseModule } from './course/course.module';
-import { StudentModule } from './student/student.module';
-import { EnrollmentModule } from './enrollment/enrollment.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
-    imports: [
-        AuthModule,
-        ProgramModule,
-        InstructorModule,
-        CourseModule,
-        StudentModule,
-        EnrollmentModule,
-    ],
+    imports: [AuthModule, UsersModule]
 })
 export class AppModule { }

@@ -1,33 +1,45 @@
 import { Injectable } from '@nestjs/common';
+import { DatabaseService } from '../database/database.service';
+import { OkPacket, RowDataPacket } from 'mysql2';
 
 @Injectable()
 export class UsersService {
-    private readonly users: any[] = [];
+    constructor(private readonly db: DatabaseService) { }
 
-    async findByUsername(username: string) {
-        return this.users.find(u => u.username === username);
+    async getAll() {
+        const [rows] = await this.db.getPool().query<RowDataPacket[]>('SELECT id, username FROM users');
+        return rows;
     }
 
     async findById(id: number) {
-        return this.users.find(u => u.id === id);
+        const [rows] = await this.db.getPool().query<RowDataPacket[]>(
+            'SELECT id, username FROM users WHERE id = ?', [id]
+        );
+        return rows[0] || null;
     }
 
-    async findByRefreshToken(token: string) {
-        return this.users.find(u => u.refreshToken === token);
+    async findByUsername(username: string) {
+        const [rows] = await this.db.getPool().query<RowDataPacket[]>(
+            'SELECT * FROM users WHERE username = ?', [username]
+        );
+        return rows[0] || null;
     }
 
-    async setRefreshToken(userId: number, token: string | null) {
-        const user = this.users.find(u => u.id === userId);
-        if (user) user.refreshToken = token;
+    async createUser(username: string, password: string) {
+        const [result] = await this.db.getPool().query<OkPacket>(
+            'INSERT INTO users (username, password) VALUES (?, ?)',
+            [username, password]
+        );
+        return { id: result.insertId, username };
     }
 
-    async create(data: { username: string; password: string; role: string }) {
-        const newUser = {
-            id: this.users.length + 1,
-            ...data,
-            refreshToken: null
-        };
-        this.users.push(newUser);
-        return newUser;
+    async updateUser(id: number, data: { username?: string; password?: string }) {
+        await this.db.getPool().query('UPDATE users SET ? WHERE id = ?', [data, id]);
+        return { message: 'User updated' };
+    }
+
+    async deleteUser(id: number) {
+        await this.db.getPool().query('DELETE FROM users WHERE id = ?', [id]);
+        return { message: 'User deleted' };
     }
 }

@@ -1,42 +1,37 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('Users')
+@Controller('users')
 export class UsersController {
-    constructor(private UsersService: UsersService) { }
+    constructor(private readonly usersService: UsersService) { }
 
-    // Get all Users (protected)
     @UseGuards(JwtAuthGuard)
     @Get()
     async getAll() {
-        return this.UsersService.getAll();
+        return this.usersService.getAll();
     }
 
-    // Get single employee by id (protected)
     @UseGuards(JwtAuthGuard)
     @Get(':id')
     async getOne(@Param('id') id: string) {
-        return this.UsersService.findById(+id);
+        return this.usersService.findById(+id);
     }
 
-    // Create employee (open - for demo)
     @Post()
     async create(@Body() body: { username: string; password: string }) {
-        return this.UsersService.createUser(body.username, body.password);
+        return this.usersService.createUser(body.username, body.password);
     }
 
-    // Update employee (protected)
     @UseGuards(JwtAuthGuard)
     @Put(':id')
     async update(@Param('id') id: string, @Body() body: any) {
-        return this.UsersService.updateUser(+id, body);
+        return this.usersService.updateUser(+id, body);
     }
 
-    // Delete employee (protected)
     @UseGuards(JwtAuthGuard)
     @Delete(':id')
     async remove(@Param('id') id: string) {
-        return this.UsersService.deleteUser(+id);
+        return this.usersService.deleteUser(+id);
     }
 }

@@ -7,31 +7,26 @@ export class CoursesService {
     constructor(private db: DatabaseService) { }
     private pool = () => this.db.getPool();
 
-    async createCourse(
-        course_code: string,
-        course_name: string,
-        credits: number,
-        program_id: number,
-        instructor_id: number
-    ) {
+    async createCourse(data: {
+        course_code: string;
+        course_name: string;
+        units?: number;
+        description?: string;
+    }) {
         try {
             const [result] = await this.pool().execute<OkPacket>(
-                `INSERT INTO course (course_code, course_name, credits, program_id, instructor_id)
-                 VALUES (?, ?, ?, ?, ?)`,
-                [course_code, course_name, credits, program_id, instructor_id]
+                `INSERT INTO course (course_code, course_name, units, description)
+                 VALUES (?, ?, ?, ?)`,
+                [data.course_code, data.course_name, data.units ?? null, data.description ?? null]
             );
             return {
                 course_id: result.insertId,
-                course_code,
-                course_name,
-                credits,
-                program_id,
-                instructor_id
+                ...data
             };
         } catch (err: any) {
-            if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+            if (err.code === 'ER_DUP_ENTRY') {
                 throw new BadRequestException(
-                    `program_id ${program_id} or instructor_id ${instructor_id} does not exist. Create them first!`
+                    `Course code '${data.course_code}' already exists.`
                 );
             }
             throw err;
@@ -40,30 +35,22 @@ export class CoursesService {
 
     async getAll() {
         const [rows] = await this.pool().execute<RowDataPacket[]>(
-            `SELECT c.course_id, c.course_code, c.course_name, c.credits, c.program_id, c.instructor_id,
-                    p.program_name,
-                    i.first_name AS instructor_first_name, i.last_name AS instructor_last_name
-             FROM course c
-             LEFT JOIN program p ON c.program_id = p.program_id
-             LEFT JOIN instructor i ON c.instructor_id = i.instructor_id
-             ORDER BY c.course_id`
+            `SELECT course_id, course_code, course_name, units, description
+             FROM course
+             ORDER BY course_id`
         );
         return rows;
     }
 
     async findById(id: number) {
         const [rows] = await this.pool().execute<RowDataPacket[]>(
-            `SELECT c.course_id, c.course_code, c.course_name, c.credits, c.program_id, c.instructor_id,
-                    p.program_name,
-                    i.first_name AS instructor_first_name, i.last_name AS instructor_last_name
-             FROM course c
-             LEFT JOIN program p ON c.program_id = p.program_id
-             LEFT JOIN instructor i ON c.instructor_id = i.instructor_id
-             WHERE c.course_id = ?`,
+            `SELECT course_id, course_code, course_name, units, description
+             FROM course
+             WHERE course_id = ?`,
             [id]
         );
         const course = rows[0];
-        if (!course) throw new NotFoundException(`Course ${id} not found`);
+        if (!course) throw new NotFoundException(`Course with ID ${id} not found`);
         return course;
     }
 
@@ -72,9 +59,8 @@ export class CoursesService {
         data: {
             course_code?: string;
             course_name?: string;
-            credits?: number;
-            program_id?: number;
-            instructor_id?: number;
+            units?: number;
+            description?: string;
         } = {}
     ) {
         const fields: string[] = [];
@@ -88,17 +74,13 @@ export class CoursesService {
             fields.push('course_name = ?');
             values.push(data.course_name);
         }
-        if (data?.credits !== undefined) {
-            fields.push('credits = ?');
-            values.push(data.credits);
+        if (data?.units !== undefined) {
+            fields.push('units = ?');
+            values.push(data.units);
         }
-        if (data?.program_id !== undefined) {
-            fields.push('program_id = ?');
-            values.push(data.program_id);
-        }
-        if (data?.instructor_id !== undefined) {
-            fields.push('instructor_id = ?');
-            values.push(data.instructor_id);
+        if (data?.description !== undefined) {
+            fields.push('description = ?');
+            values.push(data.description);
         }
 
         if (fields.length === 0) {
@@ -108,14 +90,17 @@ export class CoursesService {
         values.push(id);
 
         try {
-            await this.pool().execute(
+            const [res] = await this.pool().execute<OkPacket>(
                 `UPDATE course SET ${fields.join(', ')} WHERE course_id = ?`,
                 values
             );
+            if (res.affectedRows === 0) {
+                throw new NotFoundException(`Course with ID ${id} not found`);
+            }
         } catch (err: any) {
-            if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+            if (err.code === 'ER_DUP_ENTRY') {
                 throw new BadRequestException(
-                    `program_id ${data.program_id} or instructor_id ${data.instructor_id} does not exist`
+                    `Course code '${data.course_code}' already exists.`
                 );
             }
             throw err;
@@ -125,11 +110,22 @@ export class CoursesService {
     }
 
     async deleteCourse(id: number) {
-        const [res] = await this.pool().execute<OkPacket>(
-            'DELETE FROM course WHERE course_id = ?',
-            [id]
-        );
-        if (res.affectedRows === 0) throw new NotFoundException(`Course ${id} not found`);
-        return { deleted: true };
+        try {
+            const [res] = await this.pool().execute<OkPacket>(
+                'DELETE FROM course WHERE course_id = ?',
+                [id]
+            );
+            if (res.affectedRows === 0) {
+                throw new NotFoundException(`Course with ID ${id} not found`);
+            }
+            return { deleted: true };
+        } catch (err: any) {
+            if (err.code === 'ER_ROW_IS_REFERENCED_2') {
+                throw new BadRequestException(
+                    `Cannot delete course ${id} because it is referenced in active enrollments.`
+                );
+            }
+            throw err;
+        }
     }
 }

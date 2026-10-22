@@ -13,4 +13,4 @@ import { CoursesService } from './course.service';
     providers: [CoursesService],
     exports: [CoursesService]
 })
-export class CourseModule { }
+export class CoursesModule { }

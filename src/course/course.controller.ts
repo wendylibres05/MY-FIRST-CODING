@@ -2,33 +2,31 @@ import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nes
 import { CoursesService } from './course.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('course')
+@Controller('courses')
 export class CoursesController {
     constructor(private readonly coursesService: CoursesService) { }
 
     @UseGuards(JwtAuthGuard)
     @Get()
-    getAll() { return this.coursesService.getAll(); }
+    getAll() {
+        return this.coursesService.getAll();
+    }
 
     @UseGuards(JwtAuthGuard)
     @Get(':id')
-    getOne(@Param('id') id: string) { return this.coursesService.findById(+id); }
+    getOne(@Param('id') id: string) {
+        return this.coursesService.findById(+id);
+    }
 
+    @UseGuards(JwtAuthGuard)
     @Post()
     create(@Body() body: {
         course_code: string;
         course_name: string;
-        credits: number;
-        program_id: number;
-        instructor_id: number;
+        units?: number;
+        description?: string;
     }) {
-        return this.coursesService.createCourse(
-            body.course_code,
-            body.course_name,
-            body.credits,
-            body.program_id,
-            body.instructor_id
-        );
+        return this.coursesService.createCourse(body);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -38,9 +36,8 @@ export class CoursesController {
         @Body() body: {
             course_code?: string;
             course_name?: string;
-            credits?: number;
-            program_id?: number;
-            instructor_id?: number;
+            units?: number;
+            description?: string;
         }
     ) {
         return this.coursesService.updateCourse(+id, body);
@@ -48,5 +45,7 @@ export class CoursesController {
 
     @UseGuards(JwtAuthGuard)
     @Delete(':id')
-    remove(@Param('id') id: string) { return this.coursesService.deleteCourse(+id); }
+    remove(@Param('id') id: string) {
+        return this.coursesService.deleteCourse(+id);
+    }
 }

@@ -12,16 +12,20 @@ export class CoursesService {
         course_name: string;
         units?: number;
         description?: string;
+        program_id?: number | null;
     }) {
         try {
+            const pid = data.program_id ?? null;
+
             const [result] = await this.pool().execute<OkPacket>(
-                `INSERT INTO course (course_code, course_name, units, description)
-                 VALUES (?, ?, ?, ?)`,
-                [data.course_code, data.course_name, data.units ?? null, data.description ?? null]
+                `INSERT INTO course (course_code, course_name, units, description, program_id)
+                 VALUES (?, ?, ?, ?, ?)`,
+                [data.course_code, data.course_name, data.units ?? null, data.description ?? null, pid]
             );
             return {
                 course_id: result.insertId,
-                ...data
+                ...data,
+                program_id: pid
             };
         } catch (err: any) {
             if (err.code === 'ER_DUP_ENTRY') {
@@ -35,7 +39,7 @@ export class CoursesService {
 
     async getAll() {
         const [rows] = await this.pool().execute<RowDataPacket[]>(
-            `SELECT course_id, course_code, course_name, units, description
+            `SELECT course_id, course_code, course_name, units, description, program_id
              FROM course
              ORDER BY course_id`
         );
@@ -44,7 +48,7 @@ export class CoursesService {
 
     async findById(id: number) {
         const [rows] = await this.pool().execute<RowDataPacket[]>(
-            `SELECT course_id, course_code, course_name, units, description
+            `SELECT course_id, course_code, course_name, units, description, program_id
              FROM course
              WHERE course_id = ?`,
             [id]
@@ -61,6 +65,7 @@ export class CoursesService {
             course_name?: string;
             units?: number;
             description?: string;
+            program_id?: number | null;
         } = {}
     ) {
         const fields: string[] = [];
@@ -82,13 +87,16 @@ export class CoursesService {
             fields.push('description = ?');
             values.push(data.description);
         }
+        if (data?.program_id !== undefined) {
+            fields.push('program_id = ?');
+            values.push(data.program_id ?? null);
+        }
 
         if (fields.length === 0) {
             return this.findById(id);
         }
 
         values.push(id);
-
         try {
             const [res] = await this.pool().execute<OkPacket>(
                 `UPDATE course SET ${fields.join(', ')} WHERE course_id = ?`,
@@ -105,7 +113,6 @@ export class CoursesService {
             }
             throw err;
         }
-
         return this.findById(id);
     }
 

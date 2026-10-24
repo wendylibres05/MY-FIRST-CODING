@@ -1,7 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import * as mysql from 'mysql2/promise';
 import * as dotenv from 'dotenv';
-
 dotenv.config();
 
 @Injectable()
@@ -10,20 +9,21 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
     async onModuleInit() {
         this.pool = mysql.createPool({
-            host: process.env.DB_HOST || '',
-            port: +(process.env.DB_PORT || 20539),
-            user: process.env.DB_USER || 'avnadmin',
-            password: process.env.DB_PASSWORD || '',
-            database: process.env.DB_NAME || 'defaultdb',
+            host: process.env.DB_HOST,
+            port: +(process.env.DB_PORT || 3306),
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
             waitForConnections: true,
             connectionLimit: 10,
             queueLimit: 0,
+            ssl: { rejectUnauthorized: false }
         });
-        // optional: test connection
+
         const conn = await this.pool.getConnection();
         await conn.ping();
         conn.release();
-        console.log('MySQL pool created');
+        console.log('✅ MySQL pool created — Connected successfully!');
     }
 
     async onModuleDestroy() {

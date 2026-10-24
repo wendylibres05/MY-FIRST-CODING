@@ -21,10 +21,11 @@ export class CoursesController {
     @UseGuards(JwtAuthGuard)
     @Post()
     create(@Body() body: {
-        course_code: string;
-        course_name: string;
+        course_code: string;        // ✅ Matches service
+        course_name: string;        // ✅ Matches service
         units?: number;
         description?: string;
+        program_id?: number | null;
     }) {
         return this.coursesService.createCourse(body);
     }
@@ -34,11 +35,12 @@ export class CoursesController {
     update(
         @Param('id') id: string,
         @Body() body: {
-            course_code?: string;
-            course_name?: string;
+            course_code?: string;     // ✅ Matches service
+            course_name?: string;     // ✅ Matches service
             units?: number;
             description?: string;
-        }
+            program_id?: number | null;
+        } = {}
     ) {
         return this.coursesService.updateCourse(+id, body);
     }
